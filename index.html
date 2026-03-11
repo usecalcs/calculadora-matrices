@@ -6,27 +6,29 @@
     <title>Calculadora de Matrices Universitaria</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .app-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 600px; width: 100%; margin-top: 40px; }
+        .app-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 700px; width: 100%; margin-top: 40px; }
         h2 { text-align: center; color: #1a365d; margin-top: 0; }
         
         /* Controles de configuración */
-        .controls { display: flex; gap: 15px; margin-bottom: 20px; background: #e2e8f0; padding: 15px; border-radius: 8px; align-items: center; justify-content: center; flex-wrap: wrap;}
-        .controls select, .controls input { padding: 8px; border-radius: 5px; border: 1px solid #cbd5e0; }
-        .controls input { width: 60px; text-align: center; }
+        .controls-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; background: #e2e8f0; padding: 15px; border-radius: 8px; }
+        .controls-row { display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .controls-row select, .controls-row input { padding: 8px; border-radius: 5px; border: 1px solid #cbd5e0; }
+        .controls-row input { width: 60px; text-align: center; }
         
-        button { padding: 10px 20px; background-color: #3182ce; color: white; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        button { padding: 12px 20px; background-color: #3182ce; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; transition: background 0.3s; width: 100%; margin-top: 10px; }
         button:hover { background-color: #2b6cb0; }
         
-        /* Contenedor dinámico donde JS va a inyectar las matrices */
-        #workspace { display: flex; gap: 30px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
-        
+        /* Contenedor dinámico */
+        #workspace { display: flex; gap: 30px; justify-content: center; margin-top: 20px; flex-wrap: wrap; position: relative; }
         .matrix-wrapper { display: flex; flex-direction: column; align-items: center; }
-        .matrix-label { font-weight: bold; color: #2d3748; margin-bottom: 10px; }
+        .matrix-label { font-weight: bold; color: #2d3748; margin-bottom: 10px; background: #edf2f7; padding: 5px 15px; border-radius: 15px; }
         
         /* La grilla dinámica */
         .dynamic-grid { display: grid; gap: 5px; padding: 10px; border-left: 3px solid #1a365d; border-right: 3px solid #1a365d; background: #f7fafc; border-radius: 4px; }
         .dynamic-grid input { width: 50px; height: 50px; text-align: center; font-size: 16px; border: 1px solid #cbd5e0; border-radius: 4px; }
         .dynamic-grid input:focus { border-color: #3182ce; outline: none; }
+
+        .error-msg { width: 100%; text-align: center; color: #e53e3e; font-weight: bold; margin-top: 15px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #feb2b2; }
     </style>
 </head>
 <body>
@@ -34,66 +36,99 @@
 <div class="app-container">
     <h2>Calculadora de Matrices</h2>
     
-    <div class="controls">
-        <label>Operación:</label>
-        <select id="operation" onchange="setupWorkspace()">
-            <option value="det">Determinante |A|</option>
-            <option value="mult">Multiplicación A × B</option>
-        </select>
-
-        <label>Filas:</label>
-        <input type="number" id="rows" value="3" min="2" max="5" onchange="setupWorkspace()">
+    <div class="controls-group">
+        <div class="controls-row">
+            <label style="font-weight: bold;">Operación:</label>
+            <select id="operation" onchange="actualizarInterfaz()">
+                <option value="mult" selected>Multiplicación A × B</option>
+                <option value="det">Determinante |A|</option>
+            </select>
+        </div>
         
-        <label>Columnas:</label>
-        <input type="number" id="cols" value="3" min="2" max="5" onchange="setupWorkspace()">
+        <div class="controls-row">
+            <span style="font-weight: bold; color: #2b6cb0; width: 80px;">Matriz A:</span>
+            <label>Filas:</label>
+            <input type="number" id="rowsA" value="2" min="1" max="6" onchange="setupWorkspace()">
+            <label>Columnas:</label>
+            <input type="number" id="colsA" value="3" min="1" max="6" onchange="setupWorkspace()">
+        </div>
+
+        <div class="controls-row" id="panel-matriz-b">
+            <span style="font-weight: bold; color: #2b6cb0; width: 80px;">Matriz B:</span>
+            <label>Filas:</label>
+            <input type="number" id="rowsB" value="3" min="1" max="6" onchange="setupWorkspace()">
+            <label>Columnas:</label>
+            <input type="number" id="colsB" value="2" min="1" max="6" onchange="setupWorkspace()">
+        </div>
     </div>
 
     <div id="workspace"></div>
 
-    <button style="width: 100%; margin-top: 20px;" onclick="calcular()">Resolver</button>
+    <button onclick="calcular()">Resolver Operación</button>
 </div>
 
 <script>
-    // Esta función se ejecuta cada vez que cambias el tamaño o la operación
+    // Esta función maneja qué controles mostrar según la operación
+    function actualizarInterfaz() {
+        let op = document.getElementById('operation').value;
+        let panelB = document.getElementById('panel-matriz-b');
+        
+        if (op === 'det') {
+            panelB.style.display = 'none'; // Ocultamos los controles de B
+            // Para determinantes, forzamos que sea cuadrada (Filas = Columnas)
+            document.getElementById('colsA').value = document.getElementById('rowsA').value;
+        } else {
+            panelB.style.display = 'flex'; // Mostramos los controles de B
+        }
+        setupWorkspace();
+    }
+
+    // Dibuja las matrices en pantalla
     function setupWorkspace() {
         let op = document.getElementById('operation').value;
-        let rows = parseInt(document.getElementById('rows').value);
-        let cols = parseInt(document.getElementById('cols').value);
-        let workspace = document.getElementById('workspace');
+        let rowsA = parseInt(document.getElementById('rowsA').value) || 1;
+        let colsA = parseInt(document.getElementById('colsA').value) || 1;
+        let rowsB = parseInt(document.getElementById('rowsB').value) || 1;
+        let colsB = parseInt(document.getElementById('colsB').value) || 1;
         
-        workspace.innerHTML = ""; // Limpiamos la mesa de trabajo
+        let workspace = document.getElementById('workspace');
+        workspace.innerHTML = ""; // Limpiamos la pantalla
 
         if (op === 'det') {
-            // Para determinantes, la matriz debe ser cuadrada
-            document.getElementById('cols').value = rows; 
-            crearMatrizUI(workspace, 'Matriz A', rows, rows, 'A');
+            document.getElementById('colsA').value = rowsA; 
+            crearMatrizUI(workspace, 'Matriz A', rowsA, rowsA, 'A');
         } else if (op === 'mult') {
-            // Para multiplicar, necesitamos dos matrices
-            crearMatrizUI(workspace, 'Matriz A', rows, cols, 'A');
-            // La matriz B debe tener tantas filas como columnas tiene la A
-            crearMatrizUI(workspace, 'Matriz B', cols, rows, 'B'); 
+            crearMatrizUI(workspace, 'Matriz A', rowsA, colsA, 'A');
+            crearMatrizUI(workspace, 'Matriz B', rowsB, colsB, 'B');
+            
+            // Validación Matemática Visual
+            if (colsA !== rowsB) {
+                let error = document.createElement('div');
+                error.className = 'error-msg';
+                error.innerText = `⚠️ Error de dimensiones: No se puede multiplicar. Las columnas de A (${colsA}) deben ser iguales a las filas de B (${rowsB}).`;
+                workspace.appendChild(error);
+            }
         }
     }
 
-    // El motor que dibuja los inputs en pantalla
+    // El motor que inyecta el HTML
     function crearMatrizUI(container, titulo, filas, columnas, idPrefix) {
         let wrapper = document.createElement('div');
         wrapper.className = 'matrix-wrapper';
         
         let label = document.createElement('div');
         label.className = 'matrix-label';
-        label.innerText = titulo + ` (${filas}x${columnas})`;
+        label.innerText = `${titulo} (${filas}×${columnas})`;
         
         let grid = document.createElement('div');
         grid.className = 'dynamic-grid';
-        grid.style.gridTemplateColumns = `repeat(${columnas}, 1fr)`; // CSS dinámico
+        grid.style.gridTemplateColumns = `repeat(${columnas}, 1fr)`;
         
-        // Bucles anidados: pura lógica de Álgebra
         for (let i = 0; i < filas; i++) {
             for (let j = 0; j < columnas; j++) {
                 let input = document.createElement('input');
                 input.type = 'number';
-                input.placeholder = `${idPrefix}${i+1}${j+1}`; // Ejemplo: A11, A12
+                input.placeholder = `${idPrefix}${i+1}${j+1}`;
                 input.id = `${idPrefix}_${i}_${j}`;
                 grid.appendChild(input);
             }
@@ -104,11 +139,104 @@
         container.appendChild(wrapper);
     }
 
-    // Iniciamos la mesa de trabajo al cargar la página
-    window.onload = setupWorkspace;
+    // Arrancamos todo al cargar
+    window.onload = actualizarInterfaz;
 
     function calcular() {
-        alert("¡La interfaz dinámica funciona! Falta programar la matemática.");
+        let op = document.getElementById('operation').value;
+        let rowsA = parseInt(document.getElementById('rowsA').value);
+        let colsA = parseInt(document.getElementById('colsA').value);
+        
+        let viejoResultado = document.getElementById('contenedor-resultado');
+        if (viejoResultado) viejoResultado.remove();
+
+        if (op === 'mult') {
+            let rowsB = parseInt(document.getElementById('rowsB').value);
+            let colsB = parseInt(document.getElementById('colsB').value);
+            
+            // EL GUARDIA DE SEGURIDAD
+            if (colsA !== rowsB) {
+                alert("¡No se puede calcular! Regla de Álgebra: Las columnas de A deben ser iguales a las filas de B.");
+                return; // Cortamos la ejecución del código acá
+            }
+
+            let matrizA = extraerMatriz('A', rowsA, colsA);
+            let matrizB = extraerMatriz('B', rowsB, colsB);
+            
+            let resultado = multiplicar(matrizA, matrizB);
+            
+            // Si A es 2x3 y B es 3x2, el resultado es 2x2.
+            dibujarResultado(resultado, `Resultado A × B (${rowsA}×${colsB})`);
+        } else if (op === 'det') {
+            alert("Próximo desafío: ¡Programar el determinante dinámico!");
+        }
+    }
+
+    function extraerMatriz(prefijo, filas, columnas) {
+        let matriz = [];
+        for (let i = 0; i < filas; i++) {
+            let fila = [];
+            for (let j = 0; j < columnas; j++) {
+                let valor = parseFloat(document.getElementById(`${prefijo}_${i}_${j}`).value) || 0;
+                fila.push(valor);
+            }
+            matriz.push(fila);
+        }
+        return matriz;
+    }
+
+    function multiplicar(A, B) {
+        let filasA = A.length;
+        let colA = A[0].length;
+        let colB = B[0].length;
+        
+        let resultado = [];
+        for (let i = 0; i < filasA; i++) {
+            resultado[i] = [];
+            for (let j = 0; j < colB; j++) {
+                let suma = 0;
+                for (let k = 0; k < colA; k++) {
+                    suma += A[i][k] * B[k][j];
+                }
+                resultado[i][j] = suma;
+            }
+        }
+        return resultado;
+    }
+
+    function dibujarResultado(matriz, titulo) {
+        let app = document.querySelector('.app-container');
+        let contenedor = document.createElement('div');
+        contenedor.id = 'contenedor-resultado';
+        contenedor.style.marginTop = "30px";
+        contenedor.style.textAlign = "center";
+        
+        let label = document.createElement('h3');
+        label.innerText = titulo;
+        label.style.color = "#2b6cb0";
+        contenedor.appendChild(label);
+        
+        let grid = document.createElement('div');
+        grid.className = 'dynamic-grid';
+        grid.style.gridTemplateColumns = `repeat(${matriz[0].length}, 1fr)`;
+        grid.style.display = "inline-grid"; 
+        grid.style.background = "#ebf8ff"; 
+        
+        for (let i = 0; i < matriz.length; i++) {
+            for (let j = 0; j < matriz[0].length; j++) {
+                let div = document.createElement('div');
+                div.style.padding = "15px";
+                div.style.fontWeight = "bold";
+                div.style.fontSize = "18px";
+                div.style.border = "1px solid #90cdf4";
+                div.style.borderRadius = "4px";
+                div.style.background = "white";
+                div.innerText = matriz[i][j];
+                grid.appendChild(div);
+            }
+        }
+        contenedor.appendChild(grid);
+        app.appendChild(contenedor);
     }
 </script>
 
