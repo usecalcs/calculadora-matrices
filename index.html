@@ -6,7 +6,7 @@
     <title>Calculadora de Matrices Universitaria</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .app-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 700px; width: 100%; margin-top: 40px; }
+        .app-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 800px; width: 100%; margin-top: 40px; }
         h2 { text-align: center; color: #1a365d; margin-top: 0; }
         
         .controls-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; background: #e2e8f0; padding: 15px; border-radius: 8px; }
@@ -27,18 +27,24 @@
 
         .error-msg { width: 100%; text-align: center; color: #e53e3e; font-weight: bold; margin-top: 15px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #feb2b2; }
         .res-det { font-size: 32px; font-weight: bold; color: #1a365d; padding: 20px; background: #ebf8ff; border-radius: 8px; display: inline-block; border: 2px solid #3182ce; margin-top: 10px; }
+        
+        /* El Pizarrón del Paso a Paso */
+        #step-by-step-box { margin-top: 30px; padding: 25px; background-color: #2c5282; border-radius: 8px; color: white; display: none; }
+        #step-by-step-box h3 { border-bottom: 2px solid #90cdf4; padding-bottom: 10px; color: #90cdf4; margin-top: 0; }
+        .step-entry { font-family: 'Courier New', Courier, monospace; font-size: 15px; background: rgba(255,255,255,0.1); padding: 12px; border-radius: 5px; margin-bottom: 8px; }
+        .step-coord { font-weight: bold; color: #f6e05e; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <h2>Calculadora de Matrices</h2>
+    <h2>Calculadora de Matrices Universitaria</h2>
     
     <div class="controls-group">
         <div class="controls-row">
             <label style="font-weight: bold;">Operación:</label>
             <select id="operation" onchange="actualizarInterfaz()">
-                <option value="mult" selected>Multiplicación A × B</option>
+                <option value="mult" selected>Multiplicación A × B (con Paso a Paso)</option>
                 <option value="det">Determinante |A|</option>
                 <option value="tras">Traspuesta de A</option>
                 <option value="inv">Inversa de A (A⁻¹)</option>
@@ -48,17 +54,17 @@
         <div class="controls-row">
             <span style="font-weight: bold; color: #2b6cb0; width: 80px;">Matriz A:</span>
             <label>Filas:</label>
-            <input type="number" id="rowsA" value="3" min="1" max="6" onchange="setupWorkspace()">
+            <input type="number" id="rowsA" value="2" min="1" max="5" onchange="setupWorkspace()">
             <label id="labelColsA">Columnas:</label>
-            <input type="number" id="colsA" value="3" min="1" max="6" onchange="setupWorkspace()">
+            <input type="number" id="colsA" value="3" min="1" max="5" onchange="setupWorkspace()">
         </div>
 
         <div class="controls-row" id="panel-matriz-b">
             <span style="font-weight: bold; color: #2b6cb0; width: 80px;">Matriz B:</span>
             <label>Filas:</label>
-            <input type="number" id="rowsB" value="3" min="1" max="6" onchange="setupWorkspace()">
+            <input type="number" id="rowsB" value="3" min="1" max="5" onchange="setupWorkspace()">
             <label>Columnas:</label>
-            <input type="number" id="colsB" value="3" min="1" max="6" onchange="setupWorkspace()">
+            <input type="number" id="colsB" value="2" min="1" max="5" onchange="setupWorkspace()">
         </div>
     </div>
 
@@ -91,7 +97,7 @@
         let colsA = parseInt(document.getElementById('colsA').value) || 1;
         
         let workspace = document.getElementById('workspace');
-        workspace.innerHTML = "";
+        workspace.innerHTML = ""; // Limpiamos matrices y resultados viejos
 
         if (op === 'det' || op === 'inv') {
             document.getElementById('colsA').value = rowsA; 
@@ -107,7 +113,7 @@
             if (colsA !== rowsB) {
                 let error = document.createElement('div');
                 error.className = 'error-msg';
-                error.innerText = `⚠️ Las columnas de A (${colsA}) deben ser iguales a las filas de B (${rowsB}).`;
+                error.innerText = `⚠️ Error Álgebra: Columnas de A (${colsA}) deben ser iguales a las filas de B (${rowsB}).`;
                 workspace.appendChild(error);
             }
         }
@@ -126,6 +132,7 @@
             for (let j = 0; j < columnas; j++) {
                 let input = document.createElement('input');
                 input.type = 'number';
+                input.placeholder = `${idPrefix}${i+1}${j+1}`;
                 input.id = `${idPrefix}_${i}_${j}`;
                 grid.appendChild(input);
             }
@@ -141,25 +148,37 @@
         let op = document.getElementById('operation').value;
         let rowsA = parseInt(document.getElementById('rowsA').value);
         let colsA = parseInt(document.getElementById('colsA').value);
+        
         let viejoResultado = document.getElementById('contenedor-resultado');
         if (viejoResultado) viejoResultado.remove();
+        
+        // Limpiamos el pizarrón viejo
+        document.getElementById('step-by-step-box')?.remove();
 
         let matrizA = extraerMatriz('A', rowsA, colsA);
 
         if (op === 'mult') {
             let rowsB = parseInt(document.getElementById('rowsB').value);
             let colsB = parseInt(document.getElementById('colsB').value);
-            if (colsA !== rowsB) { alert("Error de dimensiones"); return; }
+            if (colsA !== rowsB) { alert("Error de dimensiones matriciales"); return; }
             let matrizB = extraerMatriz('B', rowsB, colsB);
-            dibujarResultado(multiplicar(matrizA, matrizB), "Resultado A × B");
+            
+            // LA MAGIA: Llamamos a la función que devuelve el resultado y la explicación
+            let calculoObj = multiplicarPasoAPaso(matrizA, matrizB);
+            
+            // 1. Dibujamos la matriz resultante
+            dibujarResultado(calculoObj.resultado, `Resultado A × B (${rowsA}×${colsB})`);
+            
+            // 2. Imprimimos el desarrollo en el pizarrón
+            imprimirPasoAPaso(calculoObj.explicacion, rowsA, colsB);
+            
         } else if (op === 'det') {
-            let d = obtenerDeterminante(matrizA);
-            mostrarResultadoUnico(`Determinante |A|`, d);
+            mostrarResultadoUnico(`Determinante |A|`, obtenerDeterminante(matrizA));
         } else if (op === 'tras') {
             dibujarResultado(trasponer(matrizA), "Matriz Traspuesta Aᵀ");
         } else if (op === 'inv') {
             let d = obtenerDeterminante(matrizA);
-            if (d === 0) { alert("La determinante es 0. La matriz no tiene inversa."); return; }
+            if (d === 0) { alert("La determinante es 0. Matriz singular."); return; }
             dibujarResultado(invertir(matrizA, d), "Matriz Inversa A⁻¹");
         }
     }
@@ -176,12 +195,37 @@
         return m;
     }
 
-    function multiplicar(A, B) {
-        let res = Array.from({length: A.length}, () => Array(B[0].length).fill(0));
-        for (let i=0; i<A.length; i++)
-            for (let j=0; j<B[0].length; j++)
-                for (let k=0; k<A[0].length; k++) res[i][j] += A[i][k] * B[k][j];
-        return res;
+    // REFACTOR: Triple bucle for para Multiplicación con Paso a Paso
+    function multiplicarPasoAPaso(A, B) {
+        let filasA = A.length, colA = A[0].length, colB = B[0].length;
+        let resultado = Array.from({length: filasA}, () => Array(colB).fill(0));
+        let explicacion = [];
+
+        for (let i = 0; i < filasA; i++) {
+            resultado[i] = [];
+            for (let j = 0; j < colB; j++) {
+                let suma = 0;
+                let textoDeLaSuma = ""; // Acá armamos la cadena (ej: " (2x1) + (3x5) ")
+                
+                for (let k = 0; k < colA; k++) {
+                    suma += A[i][k] * B[k][j];
+                    // Formateamos para que aparezca " (2 × 5) "
+                    textoDeLaSuma += ` (${A[i][k]} × ${B[k][j]}) `;
+                    // Agregamos el "+" si no es el último término
+                    if (k < colA - 1) textoDeLaSuma += "+";
+                }
+                resultado[i][j] = suma;
+                
+                // Guardamos la explicación: Coordenada, cuenta y resultado final de la posición
+                explicacion.push({
+                    coord: `C${i+1}${j+1}`, // ej: C11, C12
+                    formula: textoDeLaSuma, // ej: " (2x1) + (3x5) "
+                    valorFinal: suma       // ej: 17
+                });
+            }
+        }
+        // Devolvemos un objeto con las dos cosas
+        return { resultado, explicacion };
     }
 
     function trasponer(M) {
@@ -204,21 +248,16 @@
         let adj = [];
         for (let i=0; i<n; i++) {
             let fila = [];
-            for (let j=0; j<n; j++) {
-                let signo = ((i+j)%2===0?1:-1);
-                fila.push(signo * obtenerDeterminante(obtenerSubmatriz(M, i, j)));
-            }
+            for (let j=0; j<n; j++) fila.push(((i+j)%2===0?1:-1) * obtenerDeterminante(obtenerSubmatriz(M, i, j)));
             adj.push(fila);
         }
-        let adjT = trasponer(adj);
-        return adjT.map(row => row.map(val => Number((val/det).toFixed(3))));
+        return trasponer(adj).map(row => row.map(val => Number((val/det).toFixed(3))));
     }
 
     function mostrarResultadoUnico(titulo, valor) {
         let app = document.querySelector('.app-container');
         let div = document.createElement('div');
-        div.id = 'contenedor-resultado';
-        div.style.textAlign = "center"; div.style.marginTop = "30px";
+        div.id = 'contenedor-resultado'; div.style.textAlign = "center"; div.style.marginTop = "30px";
         div.innerHTML = `<h3>${titulo}</h3><div class="res-det">${valor}</div>`;
         app.appendChild(div);
     }
@@ -239,6 +278,30 @@
         cont.innerHTML = `<h3 style="color:#2b6cb0">${titulo}</h3>`;
         cont.appendChild(grid);
         app.appendChild(cont);
+    }
+    
+    // Función nueva que dibuja el pizarrón azul
+    function imprimirPasoAPaso(explicacion) {
+        let app = document.querySelector('.app-container');
+        
+        let pizarrón = document.createElement('div');
+        pizarrón.id = 'step-by-step-box';
+        pizarrón.style.display = "block"; // Lo encendemos
+        
+        let titulo = document.createElement('h3');
+        titulo.innerText = "Desarrollo del Cálculo (Paso a Paso)";
+        pizarrón.appendChild(titulo);
+        
+        // Recorremos el Array de explicaciones que armamos en el motor
+        explicacion.forEach(paso => {
+            let linea = document.createElement('div');
+            linea.className = 'step-entry';
+            // Usamos HTML dentro para pintar las coordenadas de amarillo
+            linea.innerHTML = `<span class="step-coord">${paso.coord}</span> = ${paso.formula} = <span style="color:white; font-weight:bold;">${paso.valorFinal}</span>`;
+            pizarrón.appendChild(linea);
+        });
+        
+        app.appendChild(pizarrón);
     }
 </script>
 </body>
