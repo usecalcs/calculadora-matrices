@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Matrices y Vectores UTN</title>
+    <title>Calculadora de Álgebra UTN - Pro</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; display: flex; justify-content: center; }
         .app-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 850px; width: 100%; margin-top: 20px; }
@@ -44,20 +44,23 @@
                     <option value="inv">Inversa A⁻¹</option>
                     <option value="tras">Traspuesta Aᵀ</option>
                 </optgroup>
-                <optgroup label="Vectores (R³)">
+                <optgroup label="Vectores">
                     <option value="v_esc">Producto Escalar (u · v)</option>
-                    <option value="v_vec">Producto Vectorial (u × v)</option>
+                    <option value="v_vec">Producto Vectorial (u × v) - Solo R³</option>
                 </optgroup>
             </select>
         </div>
         
-        <div id="dims-matrices" class="controls-row">
-            <span><b>Matriz A:</b></span>
-            <input type="number" id="rowsA" value="3" min="1" max="5" onchange="setupWorkspace()"> x 
-            <input type="number" id="colsA" value="3" min="1" max="5" onchange="setupWorkspace()">
+        <div id="dims-main" class="controls-row">
+            <span id="label-dims"><b>Dimensiones:</b></span>
+            <input type="number" id="rowsA" value="3" min="1" max="10" onchange="setupWorkspace()"> 
+            <span id="x-cols"> x </span>
+            <input type="number" id="colsA" value="3" min="1" max="10" onchange="setupWorkspace()">
+            
             <span id="label-b" style="margin-left:20px;"><b>Matriz B:</b></span>
-            <input type="number" id="rowsB" value="3" min="1" max="5" onchange="setupWorkspace()"> x 
-            <input type="number" id="colsB" value="3" min="1" max="5" onchange="setupWorkspace()">
+            <input type="number" id="rowsB" value="3" min="1" max="10" onchange="setupWorkspace()"> 
+            <span id="x-colsB"> x </span>
+            <input type="number" id="colsB" value="3" min="1" max="10" onchange="setupWorkspace()">
         </div>
     </div>
 
@@ -69,15 +72,29 @@
 <script>
     function actualizarInterfaz() {
         let op = document.getElementById('operation').value;
-        let dims = document.getElementById('dims-matrices');
-        let labelB = document.getElementById('label-b');
-        let rb = document.getElementById('rowsB'), cb = document.getElementById('colsB');
+        let isVec = op.startsWith('v_');
+        let labelB = document.getElementById('label-b'), rb = document.getElementById('rowsB'), cb = document.getElementById('colsB');
+        let colsA = document.getElementById('colsA'), xCols = document.getElementById('x-cols'), xColsB = document.getElementById('x-colsB');
 
-        dims.style.display = (op.startsWith('v_')) ? 'none' : 'flex';
-        labelB.style.display = (op === 'mult') ? 'inline' : 'none';
-        rb.style.display = cb.style.display = (op === 'mult') ? 'inline' : 'none';
-        
-        if (op === 'det' || op === 'inv') document.getElementById('colsA').value = document.getElementById('rowsA').value;
+        // Control visual para vectores
+        if (isVec) {
+            document.getElementById('label-dims').innerHTML = "<b>Dimensión (n):</b>";
+            colsA.style.display = 'none';
+            xCols.style.display = 'none';
+            labelB.style.display = 'none';
+            rb.style.display = 'none';
+            cb.style.display = 'none';
+            xColsB.style.display = 'none';
+            if (op === 'v_vec') document.getElementById('rowsA').value = 3; 
+        } else {
+            document.getElementById('label-dims').innerHTML = "<b>Matriz A:</b>";
+            colsA.style.display = 'inline';
+            xCols.style.display = 'inline';
+            labelB.style.display = (op === 'mult') ? 'inline' : 'none';
+            rb.style.display = (op === 'mult') ? 'inline' : 'none';
+            cb.style.display = (op === 'mult') ? 'inline' : 'none';
+            xColsB.style.display = (op === 'mult') ? 'inline' : 'none';
+        }
         setupWorkspace();
     }
 
@@ -85,12 +102,13 @@
         let op = document.getElementById('operation').value;
         let ws = document.getElementById('workspace');
         ws.innerHTML = "";
-        let ra = parseInt(document.getElementById('rowsA').value), ca = parseInt(document.getElementById('colsA').value);
+        let n = parseInt(document.getElementById('rowsA').value);
 
         if (op.startsWith('v_')) {
-            crearMatrizUI(ws, 'Vector u', 1, 3, 'u');
-            crearMatrizUI(ws, 'Vector v', 1, 3, 'v');
+            crearMatrizUI(ws, 'Vector u', 1, n, 'u');
+            crearMatrizUI(ws, 'Vector v', 1, n, 'v');
         } else {
+            let ra = n, ca = parseInt(document.getElementById('colsA').value);
             crearMatrizUI(ws, 'Matriz A', ra, ca, 'A');
             if (op === 'mult') crearMatrizUI(ws, 'Matriz B', parseInt(document.getElementById('rowsB').value), parseInt(document.getElementById('colsB').value), 'B');
         }
@@ -102,7 +120,7 @@
         let g = document.createElement('div'); g.className = 'dynamic-grid';
         g.style.gridTemplateColumns = `repeat(${c}, 1fr)`;
         for(let i=0; i<f; i++) for(let j=0; j<c; j++) {
-            let inp = document.createElement('input'); inp.type = 'number'; inp.id = `${id}_${i}_${j}`; inp.placeholder = `${id}${i+1}${j+1}`;
+            let inp = document.createElement('input'); inp.type = 'number'; inp.id = `${id}_${i}_${j}`;
             g.appendChild(inp);
         }
         w.appendChild(g); cont.appendChild(w);
@@ -110,23 +128,30 @@
 
     function calcular() {
         let op = document.getElementById('operation').value;
-        let ra = parseInt(document.getElementById('rowsA').value), ca = parseInt(document.getElementById('colsA').value);
+        let n = parseInt(document.getElementById('rowsA').value);
         let steps = [], resMatriz = null, resUnico = null;
 
         document.getElementById('contenedor-resultado')?.remove();
 
         if (op.startsWith('v_')) {
-            let u = extraerMatriz('u', 1, 3)[0], v = extraerMatriz('v', 1, 3)[0];
+            let u = extraerMatriz('u', 1, n)[0], v = extraerMatriz('v', 1, n)[0];
             if (op === 'v_esc') {
-                resUnico = u[0]*v[0] + u[1]*v[1] + u[2]*v[2];
-                steps.push(`u · v = (${u[0]}*${v[0]}) + (${u[1]}*${v[1]}) + (${u[2]}*${v[2]}) = ${resUnico}`);
+                resUnico = 0; let formula = "";
+                for(let i=0; i<n; i++) {
+                    resUnico += u[i]*v[i];
+                    formula += `(${u[i]}*${v[i]})` + (i < n-1 ? " + " : "");
+                }
+                steps.push(`u · v = ${formula} = ${resUnico}`);
             } else {
+                if (n !== 3) { alert("El producto vectorial solo existe en R³"); return; }
                 resMatriz = [[u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]]];
-                steps.push(`i: (${u[1]}*${v[2]}) - (${u[2]}*${v[1]}) = ${resMatriz[0][0]}`);
-                steps.push(`j: -((${u[0]}*${v[2]}) - (${u[2]}*${v[0]})) = ${resMatriz[0][1]}`);
-                steps.push(`k: (${u[0]}*${v[1]}) - (${u[1]}*${v[0]}) = ${resMatriz[0][2]}`);
+                steps.push(`Componente i: (${u[1]}*${v[2]}) - (${u[2]}*${v[1]}) = ${resMatriz[0][0]}`);
+                steps.push(`Componente j: -((${u[0]}*${v[2]}) - (${u[2]}*${v[0]})) = ${resMatriz[0][1]}`);
+                steps.push(`Componente k: (${u[0]}*${v[1]}) - (${u[1]}*${v[0]}) = ${resMatriz[0][2]}`);
             }
         } else {
+            // ... (Lógica de matrices igual a la anterior)
+            let ra = n, ca = parseInt(document.getElementById('colsA').value);
             let A = extraerMatriz('A', ra, ca);
             if (op === 'mult') {
                 let rb = parseInt(document.getElementById('rowsB').value), cb = parseInt(document.getElementById('colsB').value);
@@ -138,23 +163,16 @@
                     for(let k=0; k<ca; k++) { s += A[i][k]*B[k][j]; txt += `(${A[i][k]}*${B[k][j]})` + (k<ca-1?"+":""); }
                     resMatriz[i][j] = s; steps.push(`C${i+1}${j+1}: ${txt} = ${s}`);
                 }
-            } else if (op === 'det') {
-                resUnico = obtenerDeterminante(A, steps, "A");
-            } else if (op === 'tras') {
-                resMatriz = A[0].map((_, c) => A.map(r => r[c]));
-                steps.push("Intercambiando filas por columnas...");
+            } else if (op === 'det') { resUnico = obtenerDeterminante(A, steps);
+            } else if (op === 'tras') { resMatriz = A[0].map((_, c) => A.map(r => r[c])); steps.push("Intercambiando filas por columnas...");
             } else if (op === 'inv') {
-                let d = obtenerDeterminante(A);
-                if (d === 0) { alert("Det = 0, no hay inversa"); return; }
-                steps.push(`1. Determinante |A| = ${d}`);
+                let d = obtenerDeterminante(A); if (d === 0) { alert("Det=0"); return; }
                 let adj = A.map((r, i) => r.map((_, j) => {
-                    let sub = A.filter((_, fi) => fi !== i).map(row => row.filter((_, ci) => ci !== j));
-                    let val = ((i+j)%2===0?1:-1) * obtenerDeterminante(sub);
-                    steps.push(`Cofactor A${i+1}${j+1}: ${val}`);
+                    let val = ((i+j)%2===0?1:-1) * obtenerDeterminante(A.filter((_, fi) => fi !== i).map(row => row.filter((_, ci) => ci !== j)));
                     return val;
                 }));
                 resMatriz = adj[0].map((_, c) => adj.map(r => r[c])).map(r => r.map(v => Number((v/d).toFixed(3))));
-                steps.push("2. Traspuesta de adjunta y división por det...");
+                steps.push(`1. Det = ${d}. 2. Calculando matriz adjunta... 3. Dividiendo por determinante.`);
             }
         }
 
@@ -173,15 +191,14 @@
         } return m;
     }
 
-    function obtenerDeterminante(M, steps, label) {
+    function obtenerDeterminante(M, steps) {
         if (M.length === 1) return M[0][0];
         if (M.length === 2) return M[0][0]*M[1][1] - M[0][1]*M[1][0];
         let d = 0;
         for(let j=0; j<M.length; j++) {
-            let sub = M.filter((_, i) => i !== 0).map(row => row.filter((_, ci) => ci !== j));
+            let subDet = obtenerDeterminante(M.filter((_, i) => i !== 0).map(row => row.filter((_, ci) => ci !== j)));
             let s = (j%2===0?1:-1);
-            let subDet = obtenerDeterminante(sub);
-            if(steps) steps.push(`Laplace fila 1: ${s} * ${M[0][j]} * det(Submatriz) [${subDet}]`);
+            if(steps) steps.push(`Laplace fila 1: ${s} * ${M[0][j]} * (${subDet})`);
             d += s * M[0][j] * subDet;
         }
         return d;
