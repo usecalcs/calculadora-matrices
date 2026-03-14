@@ -25,8 +25,9 @@
         .controls-group { background: #edf2f7; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0; }
         .controls-row { display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
         select, input { padding: 10px; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 14px; outline: none; }
-        input:focus { border-color: var(--primary); ring: 2px var(--primary); }
+        input:focus { border-color: var(--primary); outline: 2px solid var(--primary); }
         input[type="number"] { width: 65px; text-align: center; font-weight: bold; }
+        input:disabled { background-color: #e2e8f0; color: #a0aec0; cursor: not-allowed; } /* Estilo para inputs bloqueados */
         
         button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(49,130,206,0.2); }
         button:hover { background: #2b6cb0; transform: translateY(-1px); }
@@ -127,7 +128,6 @@
             rB.style.display = (op === 'mult' ? 'inline' : 'none');
             cB.style.display = (op === 'mult' ? 'inline' : 'none');
             document.getElementById('x-separator-b').style.display = (op === 'mult' ? 'inline' : 'none');
-            if (op === 'det' || op === 'inv') cA.value = rA.value;
         }
         setupWorkspace();
     }
@@ -136,12 +136,21 @@
         let op = document.getElementById('operation').value;
         let ws = document.getElementById('workspace'); ws.innerHTML = "";
         let n = parseInt(document.getElementById('rowsA').value);
+        let cA_input = document.getElementById('colsA');
+
+        // BLOQUEO DE COLUMNAS PARA MATRICES CUADRADAS
+        if (op === 'det' || op === 'inv') {
+            cA_input.value = n; 
+            cA_input.disabled = true; // El usuario no puede cambiar las columnas
+        } else {
+            cA_input.disabled = false; // Se vuelve a habilitar para otras operaciones
+        }
 
         if (op.startsWith('v_')) {
             crearMatrizUI(ws, 'Vector u', 1, n, 'u');
             crearMatrizUI(ws, 'Vector v', 1, n, 'v');
         } else {
-            let rA = n, cA = parseInt(document.getElementById('colsA').value);
+            let rA = n, cA = parseInt(cA_input.value);
             crearMatrizUI(ws, 'Matriz A', rA, cA, 'A');
             if (op === 'mult') crearMatrizUI(ws, 'Matriz B', parseInt(document.getElementById('rowsB').value), parseInt(document.getElementById('colsB').value), 'B');
         }
@@ -191,6 +200,13 @@
         } else {
             let colsA_val = parseInt(document.getElementById('colsA').value);
             let A = extraerMatriz('A', n, colsA_val);
+            
+            // VALIDACIÓN EXTRA DE SEGURIDAD
+            if ((op === 'det' || op === 'inv') && (A.length !== A[0].length)) {
+                alert("Para calcular Determinante o Inversa, la matriz DEBE ser cuadrada.");
+                return;
+            }
+
             if (op === 'mult') {
                 let B = extraerMatriz('B', parseInt(document.getElementById('rowsB').value), parseInt(document.getElementById('colsB').value));
                 if (A[0].length !== B.length) { alert("Columnas A ≠ Filas B"); return; }
@@ -203,14 +219,15 @@
                 resU = obtenerDeterminante(A, steps, true); 
             } else if (op === 'tras') { resM = A[0].map((_, c) => A.map(r => r[c])); steps.push("Intercambio i ↔ j realizado.");
             } else if (op === 'inv') {
-                let d = obtenerDeterminante(A); if(d===0){alert("Det=0"); return;}
-                steps.push(`|A| = ${d}`);
+                let d = obtenerDeterminante(A); if(d===0){alert("Det=0 (No tiene inversa)"); return;}
+                steps.push(`1. Calculamos |A| = ${d}`);
                 let adjT = A.map((r, i) => r.map((_, j) => {
                     let sub = A.filter((_, fi) => fi !== i).map(row => row.filter((_, ci) => ci !== j));
                     return ((i+j)%2===0?1:-1) * obtenerDeterminante(sub);
                 }));
                 resM = adjT[0].map((_, c) => adjT.map(r => r[c])).map(r => r.map(v => Number((v/d).toFixed(3))));
-                steps.push("Matriz adjunta traspuesta y dividida por determinante.");
+                steps.push("2. Calculamos la matriz adjunta.");
+                steps.push("3. Se transpone la matriz adjunta y se divide cada término por el determinante.");
             }
         }
 
@@ -227,8 +244,7 @@
         } return m;
     }
 
-    // FUNCIÓN MEJORADA: Calcula y explica el paso a paso
-    function obtenerDeterminante(M, steps, isMainCall = false) {
+    function obtenerDeterminante(M, steps = null, isMainCall = false) {
         let n = M.length;
         if (n === 1) return M[0][0];
         
@@ -243,17 +259,10 @@
         }
         
         if (n === 3 && steps && isMainCall) {
-            // Regla de Sarrus
-            let p1 = M[0][0]*M[1][1]*M[2][2];
-            let p2 = M[1][0]*M[2][1]*M[0][2];
-            let p3 = M[2][0]*M[0][1]*M[1][2];
+            let p1 = M[0][0]*M[1][1]*M[2][2], p2 = M[1][0]*M[2][1]*M[0][2], p3 = M[2][0]*M[0][1]*M[1][2];
             let sumP = p1 + p2 + p3;
-            
-            let s1 = M[0][2]*M[1][1]*M[2][0];
-            let s2 = M[1][2]*M[2][1]*M[0][0];
-            let s3 = M[2][2]*M[0][1]*M[1][0];
+            let s1 = M[0][2]*M[1][1]*M[2][0], s2 = M[1][2]*M[2][1]*M[0][0], s3 = M[2][2]*M[0][1]*M[1][0];
             let sumS = s1 + s2 + s3;
-            
             let det = sumP - sumS;
             
             steps.push(`Cálculo de Matriz 3x3 (Regla de Sarrus):`);
@@ -268,12 +277,10 @@
             return det;
         }
 
-        // Método de Cofactores (Laplace) para matrices NxN
-        let d = 0;
-        let laplaceSteps = [];
+        let d = 0, laplaceSteps = [];
         for(let j=0; j<n; j++) {
             let sub = M.filter((_, i) => i !== 0).map(row => row.filter((_, ci) => ci !== j));
-            let subDet = obtenerDeterminante(sub, null, false); // No guardar los sub-pasos internos
+            let subDet = obtenerDeterminante(sub, null, false); 
             let s = (j%2===0 ? 1 : -1);
             d += s * M[0][j] * subDet;
             
