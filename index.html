@@ -199,7 +199,8 @@
                     for(let k=0; k<A[0].length; k++) resM[i][j] += A[i][k]*B[k][j];
                     steps.push(`C${i+1}${j+1} = ${resM[i][j]}`);
                 }
-            } else if (op === 'det') { resU = obtenerDeterminante(A, steps); 
+            } else if (op === 'det') { 
+                resU = obtenerDeterminante(A, steps, true); 
             } else if (op === 'tras') { resM = A[0].map((_, c) => A.map(r => r[c])); steps.push("Intercambio i ↔ j realizado.");
             } else if (op === 'inv') {
                 let d = obtenerDeterminante(A); if(d===0){alert("Det=0"); return;}
@@ -226,16 +227,68 @@
         } return m;
     }
 
-    function obtenerDeterminante(M, steps) {
-        if (M.length === 1) return M[0][0];
-        if (M.length === 2) return M[0][0]*M[1][1] - M[0][1]*M[1][0];
-        let d = 0;
-        for(let j=0; j<M.length; j++) {
-            let sub = M.filter((_, i) => i !== 0).map(row => row.filter((_, ci) => ci !== j));
-            let s = (j%2===0?1:-1), subDet = obtenerDeterminante(sub);
-            if(steps && M.length === 3) steps.push(`Laplace: ${s} * ${M[0][j]} * (${subDet})`);
-            d += s * M[0][j] * subDet;
+    // FUNCIÓN MEJORADA: Calcula y explica el paso a paso
+    function obtenerDeterminante(M, steps, isMainCall = false) {
+        let n = M.length;
+        if (n === 1) return M[0][0];
+        
+        if (n === 2) {
+            let det = M[0][0]*M[1][1] - M[0][1]*M[1][0];
+            if (steps && isMainCall) {
+                steps.push(`Cálculo de Matriz 2x2:`);
+                steps.push(`|A| = (${M[0][0]} * ${M[1][1]}) - (${M[0][1]} * ${M[1][0]})`);
+                steps.push(`|A| = ${M[0][0]*M[1][1]} - ${M[0][1]*M[1][0]} = ${det}`);
+            }
+            return det;
         }
+        
+        if (n === 3 && steps && isMainCall) {
+            // Regla de Sarrus
+            let p1 = M[0][0]*M[1][1]*M[2][2];
+            let p2 = M[1][0]*M[2][1]*M[0][2];
+            let p3 = M[2][0]*M[0][1]*M[1][2];
+            let sumP = p1 + p2 + p3;
+            
+            let s1 = M[0][2]*M[1][1]*M[2][0];
+            let s2 = M[1][2]*M[2][1]*M[0][0];
+            let s3 = M[2][2]*M[0][1]*M[1][0];
+            let sumS = s1 + s2 + s3;
+            
+            let det = sumP - sumS;
+            
+            steps.push(`Cálculo de Matriz 3x3 (Regla de Sarrus):`);
+            steps.push(`1. Productos de diagonales principales:`);
+            steps.push(`   (${M[0][0]}*${M[1][1]}*${M[2][2]}) + (${M[1][0]}*${M[2][1]}*${M[0][2]}) + (${M[2][0]}*${M[0][1]}*${M[1][2]})`);
+            steps.push(`   Suma principales = ${p1} + ${p2} + ${p3} = ${sumP}`);
+            steps.push(`2. Productos de diagonales secundarias:`);
+            steps.push(`   (${M[0][2]}*${M[1][1]}*${M[2][0]}) + (${M[1][2]}*${M[2][1]}*${M[0][0]}) + (${M[2][2]}*${M[0][1]}*${M[1][0]})`);
+            steps.push(`   Suma secundarias = ${s1} + ${s2} + ${s3} = ${sumS}`);
+            steps.push(`3. Determinante = Principales - Secundarias`);
+            steps.push(`   |A| = ${sumP} - ${sumS} = ${det}`);
+            return det;
+        }
+
+        // Método de Cofactores (Laplace) para matrices NxN
+        let d = 0;
+        let laplaceSteps = [];
+        for(let j=0; j<n; j++) {
+            let sub = M.filter((_, i) => i !== 0).map(row => row.filter((_, ci) => ci !== j));
+            let subDet = obtenerDeterminante(sub, null, false); // No guardar los sub-pasos internos
+            let s = (j%2===0 ? 1 : -1);
+            d += s * M[0][j] * subDet;
+            
+            if (steps && isMainCall) {
+                let signStr = s === 1 ? "+" : "-";
+                laplaceSteps.push(`${signStr} (${M[0][j]} * ${subDet})`);
+            }
+        }
+        
+        if (steps && isMainCall && n > 3) {
+            steps.push(`Cálculo de Matriz ${n}x${n} (Cofactores por Fila 1):`);
+            steps.push(`|A| = ` + laplaceSteps.join(" "));
+            steps.push(`|A| = ${d}`);
+        }
+        
         return d;
     }
 
